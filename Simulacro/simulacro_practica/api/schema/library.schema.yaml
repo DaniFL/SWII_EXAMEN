@@ -111,12 +111,35 @@ components:
         author:
           type: string
           description: Book author
+        link:
+          type: string
+          description: Link to book resource
       required:
         - _id
         - title
         - author
+        - link
     Book:
-      # TODO
+      type: object
+      properties:
+        _id:
+          $ref: "#/components/schemas/ID"
+        isbn:
+          type: string
+        title:
+          type: string
+        author:
+          type: string
+        published:
+          type: string
+        publisher:
+          type: string
+        pages:
+          type: integer
+        description:
+          type: string
+        website:
+          type: string
     ID:
       type: string
       description: Book ID obtained from the database

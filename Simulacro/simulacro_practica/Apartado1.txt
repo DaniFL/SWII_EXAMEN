@@ -1,0 +1,50 @@
+Apartado 1
+
+- Ejercicio 1:
+
+Verificar archivo OpenApi (sección de server). Modificar archivo .env (puerto y url)
+Verificar funcionamiento con postman y lanzar server (npm start)
+
+- Ejercicio 2:
+
+En carpeta routes modificar fichero endpoint correspondiente, añadir la consulta necesaria para actualizar la respues de la api según se pide en el enunciado. Verificar archivo OpenApi para ver que se devuelve en dicho endpoint. 
+
+En este caso la consulta que se debe llevar a cabo es: .find(query, { projection: {_id:1, title: 1, author:1}}) (devolver solo el id, titulo y autor del libro)
+
+- Ejercicio 3:
+
+HATEOAS (Hypermedia As The Engine Of Application State) es un principio de diseño para APIs RESTful que permite a los clientes interactuar con el servidor a través de enlaces proporcionados en las respuestas. Esto significa que las respuestas de la API contienen enlaces que describen las acciones disponibles para los recursos, facilitando la navegación y la interacción con la API sin necesidad de conocer previamente las rutas o estructuras.
+
+Por ejemplo, en lugar de devolver solo los datos de un recurso, la API también incluye enlaces que indican cómo interactuar con ese recurso (como editar, eliminar o acceder a detalles relacionados).
+
+
+// Add HATEOAS links
+  results = results.map((book) => ({
+    ...book,
+    link: localhost:${process.env.PORT}${process.env.BASE_URI}/book/${book._id},
+  }));
+
+- Ejercicio 4: 
+
+//deleteBookById()
+router.delete('/:id', async (req, res) => {
+  const id = req.params.id;
+
+  // Validate the ID before creating an ObjectId
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ error: 'Invalid ID format' });
+  }
+
+  const query = { _id: new ObjectId(id) };
+  const dbConnect = dbo.getDb();
+
+  let result = await dbConnect
+    .collection(COLLECTION)
+    .deleteOne(query);
+
+  if (result.deletedCount === 0) {
+    res.status(404).send({ error: 'ID Not found' });
+  } else {
+    res.status(200).send({ message: 'Successful operation' });
+  }
+});

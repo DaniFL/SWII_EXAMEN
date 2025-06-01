@@ -19,11 +19,18 @@ router.get('/', async (req, res) => {
   const dbConnect = dbo.getDb();
   let results = await dbConnect
     .collection(COLLECTION)
-    .find(query)
+    .find(query, { projection: {_id:1, title: 1, author:1}})
     .sort({_id: -1})
     .limit(limit)
     .toArray()
     .catch(err => res.status(400).send('Error searching for books'));
+  
+  // Add HATEOAS links
+  results = results.map((book) => ({
+    ...book,
+    link: `localhost:${process.env.PORT}${process.env.BASE_URI}/book/${book._id}`,
+  }));
+  
   next = results.length == limit ? results[results.length - 1]._id : null;
   res.json({results, next}).status(200);
 });
@@ -54,12 +61,25 @@ router.post('/', async (req, res) => {
 
 //deleteBookById()
 router.delete('/:id', async (req, res) => {
-  const query = { _id: new ObjectId(req.params.id) };
+  const id = req.params.id;
+
+  // Validate the ID before creating an ObjectId
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ error: 'Invalid ID format' });
+  }
+
+  const query = { _id: new ObjectId(id) };
   const dbConnect = dbo.getDb();
+
   let result = await dbConnect
     .collection(COLLECTION)
     .deleteOne(query);
-  res.status(200).send(result);
+
+  if (result.deletedCount === 0) {
+    res.status(404).send({ error: 'ID Not found' });
+  } else {
+    res.status(200).send({ message: 'Successful operation' });
+  }
 });
 
 module.exports = router;
