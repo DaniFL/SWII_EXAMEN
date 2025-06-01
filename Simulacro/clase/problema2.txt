@@ -1,0 +1,51 @@
+# Soluciones al problema 2
+
+## Apartado 1 - En la colección listingAndReviews indique el/los nombre(s) del alojamiento con más reviews
+
+sw2> db.listingsAndReviews.find({}, { name: 1, number_of_reviews: 1, _id: 0 }).sort({ number_of_reviews: -1 }).limit(1)
+[
+  {
+    name: 'Near Airport private room, 2 bedroom granny flat**',
+    number_of_reviews: 469
+  }
+]
+
+## Apartado 2 - En la colección listingAndReviews indique el/los nombre(s) del alojamiento con más amenities.
+
+sw2> db.listingsAndReviews.aggregate([{ $project: { name: 1, numAmenities: { $size: "$amenities" }, _id: 0 } }, { $sort: { numAmenities: -1 } }, { $limit: 1 }])
+[ { name: 'Westin Kaanapali KORVN Studio  v3', numAmenities: 68 } ]
+
+
+## Apartado 3 - En la colección listingAndReviews indique para cada tipo de property_type el número de 
+alojamientos de ese tipo.
+
+sw2> db.listingsAndReviews.aggregate([{ $group: { _id: "$property_type", count: { $sum: 1 } } }, { $sort: { count: -1 } }])
+[
+  { _id: 'Apartment', count: 447 },
+  { _id: 'House', count: 74 },
+  { _id: 'Condominium', count: 40 },
+  { _id: 'Loft', count: 21 },
+  { _id: 'Townhouse', count: 20 },
+  { _id: 'Serviced apartment', count: 16 },
+  { _id: 'Guesthouse', count: 8 },
+  { _id: 'Guest suite', count: 8 },
+  { _id: 'Villa', count: 6 },
+  { _id: 'Cottage', count: 5 },
+  { _id: 'Hostel', count: 4 },
+  { _id: 'Bed and breakfast', count: 4 },
+  { _id: 'Other', count: 3 },
+  { _id: 'Boutique hotel', count: 3 },
+  { _id: 'Cabin', count: 2 },
+  { _id: 'Tiny house', count: 2 },
+  { _id: 'Aparthotel', count: 1 },
+  { _id: 'Farm stay', count: 1 },
+  { _id: 'Nature lodge', count: 1 },
+  { _id: 'Boat', count: 1 }
+]
+
+
+## Apartado 4 - En la colección listingAndReviews indique el número de alojamientos que tienen 2, 3, 4 o 5 beds.
+
+sw2> db.listingsAndReviews.countDocuments({ beds: { $in: [2, 3, 4, 5] } })
+324
+

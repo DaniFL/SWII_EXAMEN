@@ -1,0 +1,99 @@
+Apartado 1
+
+Revisar archivo .env (variables de entorno)
+app.js -> app.use(process.env.BASE_URI + '/book', booksRouter);
+          app.use('/api/v2/book', booksRouter);
+
+Apartado 2 - La ruta GET /book devuelve todos los campos
+
+ruta_x.js: 
+.collection(COLLECTION)
+.find(query)
+.sort({_id: -1})
+.limit(limit)
+.toArray()
+
+Solución:
+Según el schema OpenAPI (BookMin), solo debe devolver: _id, title y author.
+let results = await dbConnect
+  .collection(COLLECTION)
+  .find(query, { projection: { _id: 1, title: 1, author: 1 } })
+  .sort({_id: -1})
+  .limit(limit)
+  .toArray();
+
+
+Apartado 3 - Añadir HATEOAS en GET /book
+
+Se pide añadir un campo link a cada libro que apunte a su recurso:
+http://localhost:3010/api/v2/book/{id}
+
+Solución:
+Añadir el campo link manualmente tras obtener los resultados:
+
+let results = await dbConnect
+  .collection(COLLECTION)
+  .find(query, { projection: { _id: 1, title: 1, author: 1 } })
+  .sort({_id: -1})
+  .limit(limit)
+  .toArray();
+
+results = results.map(book => ({
+  ...book,
+  link: `http://localhost:3010/api/v2/book/${book._id}`
+}));
+
+
+También actualiza el schema en library.schema.yaml:
+Agrega link a BookMin:
+BookMin:
+  type: object
+  properties:
+    _id:
+      $ref: "#/components/schemas/ID"
+    title:
+      type: string
+      description: Book title
+    author:
+      type: string
+      description: Book author
+    link:
+      type: string
+      description: Link to book resource
+  required:
+    - _id
+    - title
+    - author
+
+
+Apartado 4 - DELETE /book/{id} no maneja todos los casos
+
+La ruta actual borra directamente y siempre devuelve 200, incluso si no existe el libro.
+
+Solución:
+Añadir gestión para:
+
+- 200: Éxito
+- 400: ID inválido
+- 404: No encontrado
+
+
+router.delete('/:id', async (req, res) => {
+  const dbConnect = dbo.getDb();
+  let id;
+  try {
+    id = new ObjectId(req.params.id);
+  } catch (err) {
+    return res.status(400).send({ error: 'Invalid book ID' });
+  }
+
+  const result = await dbConnect
+    .collection(COLLECTION)
+    .deleteOne({ _id: id });
+
+  if (result.deletedCount === 0) {
+    return res.status(404).send({ error: 'Book not found' });
+  }
+
+  res.status(200).send({ message: 'Book deleted successfully' });
+});

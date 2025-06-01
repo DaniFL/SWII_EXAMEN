@@ -1,0 +1,142 @@
+## Apartado 1
+
+Actualmente la API no se está ejecutando en la ruta que está especificada en el documento
+OpenAPI. Modifique el servidor para que coincidan.
+
+Comandos:
+- npm i
+- npm start
+
+Ojo con el .env -> BASE_URI=/api  Debe ser BASE_URI=/api/v2
+
+## Apartado 2
+
+Actualmente la ruta GET /book está devolviendo la información completa de cada libro, pero eso no 
+debería ser así. Modifique el servidor para que de cada libro se devuelva sólo la información 
+especificada en el documento OpenAPI.
+
+##### IMPORTANTE #####
+para hacer consultas a la API desde Thunderclient o Postman hay que tirar peticiones a este end point: 
+Get localhost:3000/api/v2/book
+
+Resultado consulta: 
+{
+  "results": [
+    {
+      "_id": "68235e91ee689912f9be4371",
+      "isbn": "9798602477429",
+      "title": "You Don't Know JS Yet",
+      "subtitle": "Get Started",
+      "author": "Kyle Simpson",
+      "published": "2020-01-28T00:00:00.000Z",
+      "publisher": "Independently published",
+      "pages": 143,
+      "description": "The worldwide best selling You Don't Know JS book series is back for a 2nd edition: You Don't Know JS Yet. All 6 books are brand new, rewritten to cover all sides of JS for 2020 and beyond.",
+      "website": "https://github.com/getify/You-Dont-Know-JS/tree/2nd-ed/get-started"
+    },
+    (...)
+  ]
+}
+##### IMPORTANTE #####
+
+Hay que fijarse bien en el archivo .yaml (schema) de la API ya que el método GET /book sigue una serie de resultados referenciados que terminan en el schema "BookMin" 
+cuyos resultados unicamente contienen los campos (_id, title, author) de la tabla books. Por lo tanto, para ressolver este apartado en la ruta routes/book.js el método get debe ser: 
+
+//getBooks()
+router.get('/', async (req, res) => {
+  let limit = MAX_RESULTS;
+  if (req.query.limit){
+    limit = Math.min(parseInt(req.query.limit), MAX_RESULTS);
+  }
+  let next = req.query.next;
+  let query = {}
+  if (next){
+    query = {_id: {$lt: new ObjectId(next)}}
+  }
+  const dbConnect = dbo.getDb();
+  let results = await dbConnect
+    .collection(COLLECTION)
+    .find(query, { projection: {_id:1, title: 1, author: 1 }}) ## Modificación: se añade una proyección para mostrar los datos que queremos.
+    .sort({_id: -1})
+    .limit(limit)
+    .toArray()
+    .catch(err => res.status(400).send('Error searching for books'));
+  next = results.length == limit ? results[results.length - 1]._id : null;
+  res.json({results, next}).status(200);
+});
+
+
+## Apartado 3
+
+Queremos hacer nuestra API restful y para eso nos falta una parte muy importante, HATEOAS. Vamos 
+a empezar a implementarlo en alguna de las rutas, pero no queremos modificar los datos que 
+tenemos en la base de datos.
+En GET /book añade a cada libro del array results un atributo link que enlace a la ruta completa
+de ese libro: /book/{id}
+De forma que por ejemplo se devuelva lo siguiente (por simplicidad sólo se muestra un libro en los 
+resultados y puede ser que la ruta no sea correcta del todo):
+
+{
+ "results": [
+ {
+    "_id": "646332b5b3767c0bcb5d4b3b",
+    "title": "Speaking JavaScript",
+    "author": "Axel Rauschmayer",
+    "link": "localhost:3000/api/book/646332b5b3767c0bcb5d4b3b"
+ }
+ ],
+    "next": null
+}
+
+Modifica el archivo OpenAPI para tener en cuenta esta modificación.
+
+Para resolver este apartado se ha modificado la ruta (routes/book.js) del método getBooks() para que devuelva el link de cada libro. (se añade manera manual)
+//getBooks()
+router.get('/', async (req, res) => {
+  let limit = MAX_RESULTS;
+  if (req.query.limit){
+    limit = Math.min(parseInt(req.query.limit), MAX_RESULTS);
+  }
+  let next = req.query.next;
+  let query = {}
+  if (next){
+    query = {_id: {$lt: new ObjectId(next)}}
+  }
+  const dbConnect = dbo.getDb();
+  let results = await dbConnect
+    .collection(COLLECTION)
+    .find(query, { projection: {_id:1, title: 1, author: 1 }})
+    .sort({_id: -1})
+    .limit(limit)
+    .toArray()
+    .catch(err => res.status(400).send('Error searching for books'));
+  next = results.length == limit ? results[results.length - 1]._id : null;
+  ## Modificación: se añade el link a cada libro (a machete) ##
+  results = results.map(book => ({
+  ...book,
+  link: `http://localhost:3000/api/v2/book/${book._id}`
+}));
+  res.json({results, next}).status(200);
+});
+
+Además, también se ha modificado el archivo OpenAPI (library.schema.yaml) para que tenga en cuenta esta modificación.
+
+schemas:
+  BookMin:
+      type: object
+      properties:
+        _id:
+          $ref: "#/components/schemas/ID"
+        title:
+          type: string
+          description: Book title
+        author:
+          type: string
+          description: Book author
+        link:                               ## Modificación
+          type: string
+          description: Link to book resource
+      required:
+        - _id
+        - title
+        - author
