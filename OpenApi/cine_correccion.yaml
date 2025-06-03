@@ -1,0 +1,347 @@
+openapi: 3.0.3
+info:
+  title: API de cine
+  version: 0.0.1
+server:
+  url: http://localhost:3000/api
+paths:
+  /sesiones:
+    parameters: 
+      $ref: '#/components/parameters/sesiones'
+    get:
+      summary: Obtiene una lista de sesiones
+      description: Este endpoint devuelve una lista con todas las sesiones disponibles y sus detalles.
+      responses:
+        200:
+          description: Lista de sesiones disponibles
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/sesion'
+        400:
+          description: Algún parametro es incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+    post:
+      summary: Crea una nueva sesión
+      description: Crea una nueva sesión con los detalles proporcionados en el cuerpo de la solicitud.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sesion'
+      responses:
+        201:
+          description: Sesión creada con éxito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/nuevaSesion'
+        "4XX":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+
+  /sesiones/{id}:
+    parameters:
+      $ref: '#/components/parameters/id'
+    get:
+      summary: Obtiene detalles de una sesión específica
+      description: Devuelve la información de una sesión con el ID especificado.
+      responses:
+        200:
+          description: Detalles de la sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sesion'
+        404:
+          description: ID no válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+
+    put:
+      summary: Modifica una sesión
+      description: Permite actualizar los detalles de una sesión existente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sesion_actualizar' # Modificar solo algunos parámetros
+      responses:
+        200:
+          description: Sesión actualizada con éxito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/nuevaSesion
+        404:
+          description: Sesión no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+
+    delete:
+      summary: Elimina una sesión
+      description: Borra una sesión del sistema.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la sesión
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Sesión eliminada con éxito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/mensajeInformativo'
+        404:
+          description: Sesión no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+
+  /sesiones/{id}/reservar:
+    post:
+      summary: Comprar una entrada para una sesión
+      description: Permite comprar una entrada para una sesión especificada, incluyendo el número de entradas y los asientos a reservar.
+      parameters:
+        $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          $ref: '#/components/schemas/compra'
+      responses:
+        201:
+          description: Entrada comprada con éxito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ticket'
+        "4XX":
+          description: El JSON no es correcto
+          content:
+            application/json:
+              schema:
+               $ref: '#/components/schemas/error'
+
+  /peliculas:
+    get:
+      summary: Listado de películas
+      description: Devuelve una lista con las películas disponibles.
+      responses:
+        200:
+          description: Películas disponibles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/pelicula'
+
+  /peliculas/{id}:
+    put:
+      summary: Modifica una película
+      description: Actualiza los datos de una película existente.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la película
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/pelicula'
+      responses:
+        200:
+          description: Película actualizada con éxito
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje:
+                    type: string
+                    example: Película actualizada con éxito
+        404:
+          description: Película no encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Película no encontrada
+
+    delete:
+      summary: Elimina una película
+      description: Borra una película del sistema.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la película
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Película eliminada con éxito
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mensaje:
+                    type: string
+                    example: Película eliminada con éxito
+        404:
+          description: Película no encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Película no encontrada
+
+  /peliculas/{id}/sesiones:
+    get:
+      summary: Sesiones de una película concreta
+      description: Devuelve una lista de sesiones de una película específica, con la opción de filtrar por los parámetros de la sesión.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la película
+          schema:
+            type: integer
+        - name: fecha
+          in: query
+          required: false
+          description: Fecha para filtrar las sesiones
+          schema:
+            type: string
+            format: date-time
+        - name: formato
+          in: query
+          required: false
+          description: Formato de la sesión (3D, 4D, 2D)
+          schema:
+            type: string
+            enum: [3D, 4D, 2D]
+      responses:
+        200:
+          description: Sesiones disponibles para la película
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/sesion'
+        404:
+          description: Película no encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Película no encontrada
+
+components:
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      description: ID de la sesión
+      schema:
+        $ref: '#/components/schemas/id'
+    date:
+      name: date
+      in: query
+      required: false
+      description: Fecha para filtrar las sesiones
+      schema:
+        $ref: '#/components/schemas/date'
+    film:
+      name: film
+      in: query
+      required: false
+      description: Película para filtrar las sesiones
+      schema:
+        $ref: '#/components/schemas/film'
+    version:
+      name: version
+      in: query
+      required: false
+      description: versión de la película
+      schema:
+        $ref: '#/components/schemas/version'
+
+  schemas:
+    sesion:
+      type: object
+      properties:
+        results:
+          $ref: '#/components/schemas/sesiones_array' # Lista de sesiones
+        next: # Quieres más sesiones? Acceder a la siguiente parte de la paginación
+          anyOf: # Puede ser un string o un objeto
+            - type: string
+            - type: null
+          required:
+            - results
+            - next
+    sesiones_array:
+        type: array
+        items:
+          $ref: '#/components/schemas/sesion'
+    sesion:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/id'
+        pelicula:
+          $ref: '#/components/schemas/pelicula' # TODO
+        fecha:
+          $ref: '#/components/schemas/date'
+        sala:
+          type: string
+          example: Sala 1
+        version:
+          type: string
+          enum: [original, doblada, subtitulada]
+        formato:
+          $type: string
+          enum: [3D, 4D, 2D]
+        asientos_disponibles:
+          type: integer
+          minimum: 0
+        adaptada:
+          type: boolean
+        precio:
+          type: number
+          minimum: 0
+        
+
+          
